@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "daemonjob-controller.fullname" . }}
+  labels:
+{{ include "daemonjob-controller.labels" . | indent 4 }}
+  {{- with .Values.annotations }}
+  annotations: 
+    {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+{{- with .Values.service.ports }}
+  {{- range $port, $conf := . }}
+    - port: {{ $port }}
+      {{- toYaml $conf | nindent 6 }}
+  {{- end }}
+{{- end }}
+  selector:
+    app.kubernetes.io/name: {{ include "daemonjob-controller.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}

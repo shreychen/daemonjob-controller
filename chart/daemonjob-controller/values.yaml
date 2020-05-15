@@ -10,7 +10,7 @@ sslCert:
 image:
   registry: 081731760779.dkr.ecr.us-east-1.amazonaws.com
   repository: /xcloudiq/daemonjob-controller
-  tag: 1.9.15
+  tag: 0.1.0
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []

@@ -1,0 +1,16 @@
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: daemonjob-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: ops.xcloudiq.com/v1
+    resource: daemonjobs
+  childResources:
+    - apiVersion: apps/v1
+      resource: daemonsets
+  hooks:
+    sync:
+      webhook:
+        url: http://daemonjob-controller.metac/sync

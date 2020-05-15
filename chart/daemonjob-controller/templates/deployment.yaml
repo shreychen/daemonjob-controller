@@ -12,10 +12,6 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
-      annotations:
-        {{- if (.Values.global.restartOnSync | default true ) }}
-        restartOnSync: {{ randAlphaNum 5 | quote }}
-        {{- end }}
       labels:
         app.kubernetes.io/name: {{ include "daemonjob-controller.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
@@ -31,116 +27,34 @@ spec:
         {{- toYaml . | nindent 8 }}
     {{- end }}
       initContainers:
-      {{- if .Values.enableDynatrace }}
-        - name: {{ .Chart.Name }}-oneagent
-          image: {{ default .Values.image.registry .Values.global.registry }}/xcloudiq/busybox:{{- .Values.global.busyboxImageTag | default "0.1.0" }}
-          imagePullPolicy: {{ include "daemonjob-controller.imagePullPolicy" . }}
-          command:
-          - /bin/sh
-          args:
-          - -c
-          - yum install -y unzip && ARCHIVE=$(mktemp) && wget -O $ARCHIVE {{ .Values.oneagentURL | quote }} && unzip -o -d /opt/dynatrace/oneagent $ARCHIVE && rm -f $ARCHIVE
-          volumeMounts:
-          - mountPath: /opt/dynatrace/oneagent
-            name: oneagent
-      {{- end }}
       containers:
-        - name: {{ .Chart.Name }}
-          image: {{ include "daemonjob-controller.image" . }} 
-          imagePullPolicy: {{ include "daemonjob-controller.imagePullPolicy" . }}
-          command: 
-          - sh
-          - -c
-          - |
-            #!/usr/bin/env bash -e
-            {{- if .Values.maintainMode }}
-            cp /aerohive_app/etc/daemonjob-controller/html/maintenance.html.bk /aerohive_app/etc/daemonjob-controller/html/maintenance.html
-            {{- end }}
-            {{- if .Values.enableGlobalVersion }}
-            cd /var/data/www/hm-webapp && ln -s $hmVersion $lastHmVersion
-            {{- end }}
-            bash /usr/local/bin/entrypoint.sh
-          ports:
-          {{- with .Values.service.ports }}
-            {{- range $port, $conf := . }}
-            - containerPort: {{ $conf.targetPort }}
-              name: {{ $conf.name }}
-            {{- end }}
+      - name: {{ .Chart.Name }}
+        image: {{ include "daemonjob-controller.image" . }} 
+        imagePullPolicy: {{ include "daemonjob-controller.imagePullPolicy" . }}
+        command: ["python", "/hooks/sync.py"]
+        ports:
+        {{- with .Values.service.ports }}
+          {{- range $port, $conf := . }}
+          - containerPort: {{ $conf.targetPort }}
+            name: {{ $conf.name }}
           {{- end }}
-          env:
-            - name: NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            {{- if .Values.enableGlobalVersion }}
-            - name: hmVersion
-              value: {{ .Values.global.hmVersion }}
-            - name: lastHmVersion
-              value: {{ .Values.global.lastHmVersion | default "0.0.1" }}
-            {{- end }}
-            {{- if .Values.enableDynatrace }}
-            - name: LD_PRELOAD
-              value: /opt/dynatrace/oneagent/agent/lib64/liboneagentproc.so
-            {{- end }}
-            - name: cert
-              value: {{ index .Values.global "cert" | default "test" | quote }}
-            - name: sslCert
-              value: {{ index .Values.global "sslCert" | default "default" | quote }}
-          {{- with .Values.livenessProbe }}
-          livenessProbe:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.readinessProbe }}
-          readinessProbe:
-            {{- toYaml . | nindent 12 }}   
-          {{- end }}
-          volumeMounts:
-            - name: log
-              mountPath: "/data/log"
-            {{- if .Values.enableDynatrace }}
-            - mountPath: /opt/dynatrace/oneagent
-              name: oneagent
-            {{- end }}
-            {{- if .Values.configOverride }}
-            - mountPath: "/etc/daemonjob-controller/daemonjob-controller.conf"
-              subPath: "daemonjob-controller.conf"
-              name: daemonjob-controller-config 
-            - mountPath: "/etc/daemonjob-controller/sites-enabled/sub.conf"
-              subPath: "sub.conf"
-              name: daemonjob-controller-config 
-            - mountPath: "/etc/daemonjob-controller/sites-enabled/stream.conf"
-              subPath: "stream.conf"
-              name: daemonjob-controller-config 
-            {{- if.Values.cert }}
-            # - mountPath: "/etc/daemonjob-controller/conf.d/cwp/server.pem"
-            #   subPath: "server.pem"
-            #   name: daemonjob-controller-config
-            # - mountPath: "/etc/daemonjob-controller/conf.d/cwp/server.key"
-            #   subPath: "server.key"
-            #   name: daemonjob-controller-config
-            # - mountPath: "/etc/daemonjob-controller/conf.d/cwp/ca.pem"
-            #   subPath: "ca.pem"
-            #   name: daemonjob-controller-config
-            {{- end }}
-            {{- end }}
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+        {{- end }}
+        livenessProbe:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+        {{- with .Values.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 12 }}   
+        {{- end }}
+        volumeMounts:
+        - name: hooks
+          mountPath: /hooks
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
       volumes:
-      - name: log
-        hostPath: 
-          path: /data
-          type: DirectoryOrCreate
-      {{- if .Values.configOverride }}
-      - name: daemonjob-controller-config
+      - name: hooks
         configMap:
-          name: {{ template "daemonjob-controller.fullname" . }}-config
-          defaultMode: 0755
-      {{- end }}
-      {{- if .Values.enableDynatrace }}
-      - name: oneagent
-        emptyDir: {}
-      {{- end }}
-      {{- with .Values.nodeSelector }}
+          name: daemonjob-controller
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}

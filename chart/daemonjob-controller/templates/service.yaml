@@ -11,12 +11,7 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-{{- with .Values.service.ports }}
-  {{- range $port, $conf := . }}
-    - port: {{ $port }}
-      {{- toYaml $conf | nindent 6 }}
-  {{- end }}
-{{- end }}
+  - port: 80
   selector:
     app.kubernetes.io/name: {{ include "daemonjob-controller.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}

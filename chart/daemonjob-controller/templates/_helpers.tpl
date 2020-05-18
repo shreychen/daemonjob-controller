@@ -48,11 +48,6 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 Global image definition
 */}}
 {{- define "daemonjob-controller.image" -}}
-{{- $registry := default .Values.image.registry .Values.global.registry -}}
-{{- if .Values.enableGlobalVersion }}
-{{- printf "%s%s:%s" $registry .Values.image.repository .Values.global.hmVersion -}}
-{{- else }}
-{{- printf "%s%s:%s" $registry .Values.image.repository .Values.image.tag -}}
-{{- end -}}
+{{- printf "%s%s:%s" .Values.image.registry .Values.image.repository .Values.image.tag -}}
 {{- end -}}
 

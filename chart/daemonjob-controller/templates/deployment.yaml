@@ -30,7 +30,7 @@ spec:
       containers:
       - name: {{ .Chart.Name }}
         image: {{ include "daemonjob-controller.image" . }} 
-        imagePullPolicy: {{ include "daemonjob-controller.imagePullPolicy" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
         command: ["python", "/hooks/sync.py"]
         ports:
         {{- with .Values.service.ports }}
@@ -39,6 +39,7 @@ spec:
             name: {{ $conf.name }}
           {{- end }}
         {{- end }}
+        {{- with .Values.livenessProbe }}
         livenessProbe:
           {{- toYaml . | nindent 12 }}
         {{- end }}
@@ -55,6 +56,7 @@ spec:
       - name: hooks
         configMap:
           name: daemonjob-controller
+      {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}

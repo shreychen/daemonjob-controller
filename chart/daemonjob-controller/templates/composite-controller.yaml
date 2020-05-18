@@ -13,4 +13,4 @@ spec:
   hooks:
     sync:
       webhook:
-        url: http://daemonjob-controller.metac/sync
+        url: http://daemonjob-controller.metacontroller/sync
